@@ -47,6 +47,7 @@ def get_champion_mastery(puuid):
     champ_number = data_table.shape[0]
     url = LOL_CHAMP_MASTERY.format(SERVER_BASE_URL, puuid, champ_number, API_KEY)
     response = rq.get(url)
+    print(pd.DataFrame(json.loads(response.text)).columns)
     table = pd.DataFrame(json.loads(response.text))[
         [
             "championId",
@@ -54,6 +55,7 @@ def get_champion_mastery(puuid):
             "tokensEarned",
             "chestGranted",
             "championPoints",
+            "championPointsUntilNextLevel",
             "lastPlayTime",
         ]
     ]
@@ -64,7 +66,7 @@ def get_champion_mastery(puuid):
         .drop(["key", "championId"], axis=1)
         .sort_values(
             ["championLevel", "tokensEarned", "championPoints", "chestGranted"],
-            ascending=[False, False, True, True],
+            ascending=[False, False, False, True],
         )
     )
 
@@ -88,9 +90,12 @@ def apply_format(puuid, mode="token"):
             | ((table["championLevel"] == 6) & (table["tokensEarned"] == 3))
         ]
     elif mode == "level":
-        new_table = table[table["championLevel"] < 6]
+        new_table = table[table["championLevel"] < 5]
     elif mode == "chest":
         new_table = table[table["chestGranted"] == False]
+
+    if mode != "level":
+        new_table = new_table.drop('championPointsUntilNextLevel', axis=1)
 
     new_table = new_table.set_index("name").reset_index()
 
